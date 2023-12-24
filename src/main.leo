@@ -1,7 +1,66 @@
 // The 'templateankara' program.
 program templateankara.aleo {
-    transition main(public a: u32, b: u32) -> u32 {
-        let c: u32 = a + b;
-        return c;
+
+    mapping account: address => u64;
+
+    record token{
+        owner: address,
+        amount: u64
+    }
+
+    transition mint_public(public receiver:address, public amount :u64){
+        return then finalize(receiver, amount);
+    }   
+
+    finalize mint_public(receiver:address, amount :u64){
+        let receiver_amount:u64 = Mapping::get_or_use(account, receiver, 0u64);
+        Mapping::set(account, receiver, receiver_amount + amount);
+    }
+
+    transition mint_private(private receiver:address, private amount :u64) -> token {
+        return token{owner: receiver, amount: amount};
+    }
+
+    transition transfer_public(public receiver:address, public amount :u64){
+        return then finalize(self.caller, receiver, amount);
+    }
+
+    finalize transfer_public(sender:address, receiver:address, amount :u64){
+        let sender_amount:u64 = Mapping::get_or_use(account, sender, 0u64);
+        Mapping::set(account, sender, sender_amount - amount);
+
+        let receiver_amount:u64 = Mapping::get_or_use(account, receiver, 0u64);
+        Mapping::set(account, receiver, receiver_amount + amount);
+    }
+
+    transition transfer_private(private sender:token, private receiver:address, private amount :u64) -> (token, token) {
+        let difference: u64 = sender.amount - amount;
+        
+
+        return (token{owner: sender.owner, amount: difference}, token{owner: receiver, amount: amount});
+    }
+
+    transition transfer_priv_to_pub(private sender:token, public receiver:address, public amount :u64) -> token {
+        let difference: u64 = sender.amount - amount;
+
+        
+        
+        return token{owner: sender.owner, amount: difference} then finalize(receiver, amount);
+    }
+
+    finalize transfer_priv_to_pub(receiver:address, amount :u64){
+        let receiver_amount:u64 = Mapping::get_or_use(account, receiver, 0u64);
+        Mapping::set(account, receiver, receiver_amount + amount);
+    }
+
+    transition transfer_pub_to_priv(private receiver:address, public amount :u64) -> token {
+
+
+        return token{owner: receiver, amount: amount} then finalize(self.caller, amount);
+    }
+
+    finalize transfer_pub_to_priv(sender:address, amount :u64){
+        let sender_amount:u64 = Mapping::get_or_use(account, sender, 0u64);
+        Mapping::set(account, sender, sender_amount - amount);
     }
 }
