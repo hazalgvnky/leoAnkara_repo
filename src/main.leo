@@ -1,5 +1,5 @@
 // The 'templateankara' program.
-program templateankara.aleo {
+program hazal_ankara_leo.aleo {
 
     mapping account: address => u64;
 
